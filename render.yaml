@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: pwa-push-server
+    env: node
+    plan: free
+    region: oregon
+    # Start command uses package.json script start:server
+    buildCommand: ""
+    startCommand: "npm run start:server"
+    healthCheckPath: "/"
+    envVars:
+      - key: VAPID_PUBLIC
+        value: "<your-vapid-public-key>"
+      - key: VAPID_PRIVATE
+        value: "<your-vapid-private-key>"

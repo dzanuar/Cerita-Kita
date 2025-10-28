@@ -1,0 +1,13 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[context.production.environment]
+  # Set these environment variables in Netlify site settings (UI) before deploying
+  # VAPID_PUBLIC_KEY = "<your-vapid-public-key>"
+  # PUSH_SERVER_URL = "https://your-push-server.example"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

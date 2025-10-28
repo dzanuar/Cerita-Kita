@@ -1,0 +1,301 @@
+/* Import Google Font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+
+/* CSS Variables for Dark Theme */
+:root {
+  --background-primary: #121212;
+  --background-secondary: #1E1E1E;
+  --text-primary: #E0E0E0;
+  --text-secondary: #A0A0A0;
+  --accent-primary: #00A8FF; /* Electric Blue */
+  --accent-secondary: #9C27B0; /* Purple */
+  --border-color: #333333;
+  --shadow-color: rgba(0, 168, 255, 0.2);
+}
+
+/* Reset & Basic Styling */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--background-primary);
+  color: var(--text-primary);
+}
+
+/* Header & Navigation */
+header {
+  background-color: var(--background-secondary);
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.brand-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--accent-primary);
+}
+
+.nav-list {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.nav-list a, #logout-button {
+  text-decoration: none;
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 1rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: 'Inter', sans-serif;
+  transition: color 0.3s, text-shadow 0.3s;
+}
+
+.nav-list a:hover, #logout-button:hover {
+  color: var(--accent-primary);
+  text-shadow: 0 0 5px var(--shadow-color);
+}
+
+/* Main Content */
+.main-content {
+  padding: 2rem 1.5rem;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/* Home Page: Story List & Map */
+.content-container {
+  display: flex;
+  gap: 2rem;
+}
+
+.story-list-container {
+  width: 40%;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.story-item {
+  background-color: var(--background-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  cursor: pointer;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  overflow: hidden;
+}
+
+.story-item:hover {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 15px var(--shadow-color);
+}
+
+.story-item img {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  display: block;
+}
+
+.story-item-content {
+  padding: 1rem 1.25rem;
+}
+
+.story-item h3 {
+  font-size: 1.25rem;
+  color: var(--text-primary);
+}
+
+.story-item p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+}
+
+.story-item.story-item--active {
+  border-color: var(--accent-secondary);
+  box-shadow: 0 0 15px rgba(156, 39, 176, 0.4);
+}
+
+.map-container {
+  width: 60%;
+}
+
+#map {
+  width: 100%;
+  height: 85vh;
+  border-radius: 12px;
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+
+/* Add Story & Auth Pages Form */
+.add-story-container, .auth-container {
+  max-width: 500px;
+  margin: 2rem auto;
+  padding: 2.5rem;
+  background-color: var(--background-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+}
+
+.form-group, .auth-form .form-group {
+  margin-bottom: 1.5rem;
+}
+
+label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: var(--text-secondary);
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="file"],
+textarea {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  background-color: var(--background-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: 'Inter', sans-serif;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+input:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 10px var(--shadow-color);
+}
+
+.map-add {
+  height: 300px;
+  border-radius: 8px;
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+
+.submit-button {
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(90deg, var(--accent-secondary), var(--accent-primary));
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.submit-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 168, 255, 0.4);
+}
+
+/* Feedback & Spinner */
+.feedback-message {
+  padding: 1rem;
+  margin-top: 1.5rem;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: 500;
+}
+.feedback-message.success { background-color: #2E7D32; color: #C8E6C9; }
+.feedback-message.error { background-color: #C62828; color: #FFCDD2; }
+
+.spinner-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.spinner {
+  border: 8px solid #333;
+  border-top: 8px solid var(--accent-primary);
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+.drawer-button { 
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-size: 2rem;
+}
+
+@media screen and (max-width: 768px) {
+  .nav-list { display: none; }
+  .drawer-button { display: block; }
+  .content-container { flex-direction: column; }
+  .story-list-container, .map-container { width: 100%; max-height: 50vh; }
+  #map, .map-add { height: 50vh; }
+}
+
+/* Styling untuk tanggal di kartu cerita */
+.story-date {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+/* Styling untuk h1 di brand-name */
+h1.brand-name {
+  font-size: 1.5rem; /* Ukuran tetap sama */
+  font-weight: 700;
+  margin: 0; /* Hapus margin default h1 */
+}
+
+h1.brand-name a {
+  text-decoration: none;
+  color: var(--accent-primary);
+}
+
+/* Styling untuk footer */
+footer {
+  text-align: center;
+  padding: 1.5rem;
+  background-color: var(--background-secondary);
+  border-top: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  margin-top: 2rem;
+}
