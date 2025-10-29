@@ -13,8 +13,8 @@ module.exports = {
     path: path.resolve(__dirname, 'dist'),
     filename: '[name].bundle.js',
     clean: true,
-    assetModuleFilename: 'assets/[hash][ext][query]', // Untuk output asset
-    publicPath: '/', // Pastikan aset path benar
+    assetModuleFilename: 'assets/[hash][ext][query]',
+    publicPath: '/', 
   },
   module: {
     rules: [

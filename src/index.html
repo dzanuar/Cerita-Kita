@@ -2,13 +2,37 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="theme-color" content="#ffffff">
-  <link rel="manifest" href="./manifest.json">
-  <title>My PWA App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <meta name="theme-color" content="#343a40">
+  <link rel="manifest" href="/manifest.json"> <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+  
+  <title>Cerita Kita</title>
 </head>
 <body>
-  <h1>Aplikasi PWA Saya</h1>
-  <button id="installBtn" hidden>Install Aplikasi</button>
-  <script src="bundle.js"></script>
-</body>
+
+  <header>
+    <div class="main-header container">
+      <h1 class="brand-name"><a href="#/">Cerita Kita</a></h1>
+
+      <button id="drawer-button" class="drawer-button" aria-label="Buka menu navigasi">☰</button>
+      
+      <nav id="navigation-drawer" class="navigation-drawer">
+        <ul id="nav-list" class="nav-list">
+          <li class="main-nav-link"><a href="#/">Beranda</a></li>
+          <li class="main-nav-link"><a href="#/add-story">Tambah Cerita</a></li>
+          <li><a id="login-link" href="#/login">Login</a></li>
+          <li><button id="logout-button" style="display: none;">Logout</button></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" class="main-content"></main>
+
+  <footer>
+    <p>Submission Project © 2025</p>
+  </footer>
+
+  </body>
 </html>
