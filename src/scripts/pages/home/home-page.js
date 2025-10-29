@@ -1,9 +1,8 @@
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+// Impor ini adalah "Network First" (dari api.js)
 import { getAllStories } from '../../data/api'; 
-
-// INI ADALAH PERBAIKANNYA:
-// Path diubah dari '../utils/idb-helper' menjadi '../../utils/idb-helper'
+// Impor ini adalah "Cache Only" (untuk pencarian)
 import StoryIdb from '../../utils/idb-helper'; 
 
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -22,6 +21,7 @@ class HomePage {
   #markers = {};
 
   async render() {
+    // ... (Fungsi render() Anda tidak berubah) ...
     return `
       <div class="content-container">
         <div class="story-list-container">
@@ -46,6 +46,7 @@ class HomePage {
   }
 
   async afterRender() {
+    // ... (Fungsi afterRender() Anda tidak berubah) ...
     requestAnimationFrame(() => {
       this.#map = L.map('map').setView([-2.5489, 118.0149], 5);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -57,26 +58,29 @@ class HomePage {
     });
   }
 
+  // --- INI ADALAH PERBAIKAN UTAMANYA ---
   async _loadInitialData() {
     try {
-      let stories = await StoryIdb.getAllStories();
-
-      if (!stories || stories.length === 0) {
-        console.log('IDB is empty. Fetching from network...');
-        stories = await getAllStories();
-        await StoryIdb.putAllStories(stories);
-      }
+      // SELALU panggil getAllStories() dari api.js
+      // File ini sudah punya logika: Network first, fallback to cache (IDB)
+      // dan otomatis menyimpan ke IDB jika sukses.
+      console.log('Fetching stories (Network first)...');
+      const stories = await getAllStories(); // <-- Ini dari api.js
       
+      // Render data (baik data baru dari API, atau data lama dari IDB jika offline)
       this._renderStoryList(stories);
-
+    
     } catch (error) {
-      console.error('Gagal memuat cerita:', error);
+      // Error ini hanya akan muncul jika network GAGAL dan IDB juga KOSONG
+      console.error('Gagal memuat cerita (network and cache failed):', error);
       const storyListElement = document.querySelector('#story-list');
       storyListElement.innerHTML = `<p style="color: var(--text-secondary);">Gagal memuat cerita. Coba lagi nanti.</p>`;
     }
   }
+  // --- AKHIR PERBAIKAN ---
 
   _renderStoryList(stories) {
+    // ... (Fungsi _renderStoryList() Anda tidak berubah) ...
     const storyListElement = document.querySelector('#story-list');
     storyListElement.innerHTML = '';
 
@@ -124,6 +128,9 @@ class HomePage {
   }
 
   _setupEventListeners() {
+    // ... (Fungsi _setupEventListeners() Anda tidak berubah) ...
+    // Catatan: Fungsi pencarian Anda masih mencari dari IDB,
+    // yang datanya sudah diperbarui oleh _loadInitialData. Ini sudah benar.
     const storyListElement = document.querySelector('#story-list');
     
     storyListElement.addEventListener('click', (event) => {
@@ -149,6 +156,7 @@ class HomePage {
   }
 
   _highlightStoryItem(storyId) {
+    // ... (Fungsi _highlightStoryItem() Anda tidak berubah) ...
     document.querySelectorAll('.story-item').forEach(item => {
       item.classList.remove('story-item--active');
     });
