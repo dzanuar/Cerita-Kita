@@ -67,8 +67,8 @@ class HomePage {
       console.log('Fetching stories (Network first)...');
       const stories = await getAllStories(); // <-- Ini dari api.js
       
-      // Render data (baik data baru dari API, atau data lama dari IDB jika offline)
-      this._renderStoryList(stories);
+  // Render data (baik data baru dari API, atau data lama dari IDB jika offline)
+  await this._renderStoryList(stories);
     
     } catch (error) {
       // Error ini hanya akan muncul jika network GAGAL dan IDB juga KOSONG
@@ -79,7 +79,7 @@ class HomePage {
   }
   // --- AKHIR PERBAIKAN ---
 
-  _renderStoryList(stories) {
+  async _renderStoryList(stories) {
     // ... (Fungsi _renderStoryList() Anda tidak berubah) ...
     const storyListElement = document.querySelector('#story-list');
     storyListElement.innerHTML = '';
@@ -94,7 +94,7 @@ class HomePage {
       return;
     }
 
-    stories.forEach(story => {
+    for (const story of stories) {
       const storyItem = document.createElement('div');
       storyItem.classList.add('story-item');
       storyItem.setAttribute('data-id', story.id);
@@ -105,6 +105,7 @@ class HomePage {
 
       storyItem.innerHTML = `
         <img src="${story.photoUrl}" alt="Foto cerita dari ${story.name}">
+        <button class="favorite-btn" data-id="${story.id}" aria-label="Tambahkan ke favorit">☆</button>
         <div class="story-item-content">
           <p class="story-date">${storyDate}</p>
           <h3>${story.name}</h3>
@@ -113,6 +114,35 @@ class HomePage {
       `;
       
       storyListElement.appendChild(storyItem);
+
+      // Favorite button wiring
+      try {
+        const favBtn = storyItem.querySelector('.favorite-btn');
+        const isFav = await StoryIdb.isFavorite(story.id);
+        favBtn.textContent = isFav ? '♥' : '☆';
+        favBtn.title = isFav ? 'Hapus dari favorit' : 'Tambahkan ke favorit';
+        favBtn.addEventListener('click', async (ev) => {
+          ev.stopPropagation(); // Jangan trigger klik kartu
+          try {
+            const currentlyFav = await StoryIdb.isFavorite(story.id);
+            if (currentlyFav) {
+              await StoryIdb.removeFavorite(story.id);
+              favBtn.textContent = '☆';
+              favBtn.title = 'Tambahkan ke favorit';
+            } else {
+              // Store minimal story snapshot
+              await StoryIdb.addFavorite({ id: story.id, name: story.name, description: story.description, photoUrl: story.photoUrl, createdAt: story.createdAt });
+              favBtn.textContent = '♥';
+              favBtn.title = 'Hapus dari favorit';
+            }
+          } catch (err) {
+            console.error('Favorite toggle failed', err);
+            alert('Gagal mengubah favorit: ' + err.message);
+          }
+        });
+      } catch (err) {
+        console.warn('Favorite button wiring failed', err);
+      }
 
       if (story.lat && story.lon) {
         const marker = L.marker([story.lat, story.lon])
@@ -123,8 +153,8 @@ class HomePage {
           this._highlightStoryItem(story.id);
         });
         this.#markers[story.id] = marker;
+        }
       }
-    });
   }
 
   _setupEventListeners() {

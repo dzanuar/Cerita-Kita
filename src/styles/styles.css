@@ -105,6 +105,24 @@ header {
   overflow: hidden;
 }
 
+/* ensure we can absolutely position the favorite button */
+.story-item { position: relative; }
+
+.favorite-btn {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  background: rgba(0,0,0,0.45);
+  color: #fff;
+  border: none;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.favorite-btn:hover { background: rgba(0,0,0,0.6); }
+
 .story-item:hover {
   border-color: var(--accent-primary);
   box-shadow: 0 0 15px var(--shadow-color);

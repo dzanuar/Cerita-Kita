@@ -6,8 +6,10 @@ import CONFIG from '../config';
 const DB_NAME = `story-db-${CONFIG.VERSION || '1'}`;
 const OBJECT_STORE_NAME = 'stories';
 const QUEUE_STORE_NAME = 'sync-queue';
+const FAVORITES_STORE = 'favorites';
 
-const dbPromise = openDB(DB_NAME, 2, {
+// Bump DB version to add 'favorites' store
+const dbPromise = openDB(DB_NAME, 3, {
   upgrade(database, oldVersion, newVersion, transaction) {
     if (!database.objectStoreNames.contains(OBJECT_STORE_NAME)) {
       // Buat object store dengan 'id' sebagai keyPath
@@ -16,6 +18,10 @@ const dbPromise = openDB(DB_NAME, 2, {
     if (!database.objectStoreNames.contains(QUEUE_STORE_NAME)) {
       // Store untuk antrian sync ketika offline
       database.createObjectStore(QUEUE_STORE_NAME, { keyPath: 'id', autoIncrement: true });
+    }
+    if (!database.objectStoreNames.contains(FAVORITES_STORE)) {
+      // Store untuk menyimpan cerita yang ditandai sebagai favorit
+      database.createObjectStore(FAVORITES_STORE, { keyPath: 'id' });
     }
   },
 });
@@ -91,6 +97,41 @@ const StoryIdb = {
   async deleteQueueItem(id) {
     console.log(`IDB: Deleting queued item ${id}`);
     return (await dbPromise).delete(QUEUE_STORE_NAME, id);
+  },
+
+  // Favorites CRUD
+  async addFavorite(story) {
+    if (!story || !story.id) {
+      console.error('IDB: Favorite story must have an id');
+      return;
+    }
+    console.log(`IDB: Adding favorite ${story.id}`);
+    return (await dbPromise).put(FAVORITES_STORE, story);
+  },
+
+  async removeFavorite(id) {
+    console.log(`IDB: Removing favorite ${id}`);
+    return (await dbPromise).delete(FAVORITES_STORE, id);
+  },
+
+  async getAllFavorites() {
+    console.log('IDB: Getting all favorites');
+    return (await dbPromise).getAll(FAVORITES_STORE);
+  },
+
+  async isFavorite(id) {
+    if (!id) return false;
+    const item = await (await dbPromise).get(FAVORITES_STORE, id);
+    return !!item;
+  },
+
+  async searchFavorites(query) {
+    const favs = await this.getAllFavorites();
+    const lowerCaseQuery = (query || '').toLowerCase();
+    return favs.filter(
+      (story) => (story.name && story.name.toLowerCase().includes(lowerCaseQuery))
+                 || (story.description && story.description.toLowerCase().includes(lowerCaseQuery))
+    );
   },
 };
 

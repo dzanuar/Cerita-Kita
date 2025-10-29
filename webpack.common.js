@@ -2,8 +2,8 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
-// Workbox plugin is applied only in production build (see webpack.prod.js)
-const webpack = require('webpack');
+const WorkboxWebpackPlugin = require('workbox-webpack-plugin'); // <-- BUTUH INI
+const webpack = require('webpack'); // <-- BUTUH INI
 
 module.exports = {
   entry: {
@@ -14,7 +14,7 @@ module.exports = {
     filename: '[name].bundle.js',
     clean: true,
     assetModuleFilename: 'assets/[hash][ext][query]',
-    publicPath: '/', 
+    publicPath: '/',
   },
   module: {
     rules: [
@@ -23,7 +23,6 @@ module.exports = {
         use: ['style-loader', 'css-loader'],
       },
       {
-        // ✅ Loader untuk gambar PNG, JPG, SVG dll
         test: /\.(png|jpe?g|gif|svg)$/i,
         type: 'asset/resource',
         generator: {
@@ -31,7 +30,6 @@ module.exports = {
         },
       },
       {
-        // ✅ Loader untuk file font jika dibutuhkan
         test: /\.(woff(2)?|eot|ttf|otf)$/i,
         type: 'asset/resource',
         generator: {
@@ -42,12 +40,9 @@ module.exports = {
   },
   plugins: [
     new HtmlWebpackPlugin({
-      // Template exists at src/index.html in this project
       template: path.resolve(__dirname, 'src/index.html'),
       filename: 'index.html',
     }),
-
-    // ✅ Menyalin file statis (manifest, icons, dll)
     new CopyWebpackPlugin({
       patterns: [
         {
@@ -57,11 +52,14 @@ module.exports = {
       ],
     }),
 
-    // Note: InjectManifest is applied in webpack.prod.js so it only runs during
-    // `npm run build` (production). This avoids multiple InjectManifest runs
-    // when using dev server / watch mode which can cause duplicate
-    // self.__WB_MANIFEST injections or build warnings.
-    // Inject environment variables into client bundle at build time.
+    // ✅ InjectManifest HANYA DI SINI
+    new WorkboxWebpackPlugin.InjectManifest({
+      swSrc: path.resolve(__dirname, 'src/scripts/sw.js'),
+      swDest: 'sw.js', // Pastikan nama output ini konsisten
+      maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+    }),
+    
+    // ✅ DefinePlugin di sini
     new webpack.DefinePlugin({
       'process.env': {
         PUSH_SERVER_URL: JSON.stringify(process.env.PUSH_SERVER_URL || ''),
@@ -72,7 +70,7 @@ module.exports = {
   resolve: {
     fallback: {
       fs: false,
-      path: false,
+      path: false, // Polyfill path sudah kita hapus dependensinya
     },
   },
 };
