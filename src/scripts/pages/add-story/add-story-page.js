@@ -1,6 +1,6 @@
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { addNewStory } from '../../data/api'; // <-- Impor fungsi baru
+import { addNewStory } from '../../data/api';
 
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -15,6 +15,7 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 class AddStoryPage {
   async render() {
+    // ... (Fungsi render() Anda tidak berubah, sudah benar) ...
     return `
       <div class="add-story-container">
         <h2>Tambah Cerita Baru</h2>
@@ -41,6 +42,7 @@ class AddStoryPage {
   }
 
   async afterRender() {
+    // ... (Fungsi afterRender() Anda tidak berubah, sudah benar) ...
     const map = L.map('map-add').setView([-2.5489, 118.0149], 5);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -67,29 +69,56 @@ class AddStoryPage {
     const form = document.querySelector('#add-story-form');
     const feedbackElement = document.querySelector('#feedback-message');
     const submitButton = document.querySelector('#submit-button');
+    
+    // Ambil input untuk validasi manual
+    const imageInput = document.querySelector('#story-image');
+    const latInput = document.querySelector('#latitude');
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
+      this._showFeedback('', '', feedbackElement); // Hapus pesan lama
 
-      // Validasi sederhana
+      // --- TAMBAHAN VALIDASI MANUAL ---
+      
+      // 1. Validasi checkValidity() bawaan
       if (!form.checkValidity()) {
-        this._showFeedback('Semua kolom harus diisi, termasuk gambar dan lokasi di peta.', 'error', feedbackElement);
+        this._showFeedback('Semua kolom harus diisi, termasuk gambar dan deskripsi.', 'error', feedbackElement);
+        return;
+      }
+
+      // 2. Validasi Ukuran File (Pencegahan Error 413)
+      const MAX_FILE_SIZE = 1000000; // 1 MB
+      if (imageInput.files[0] && imageInput.files[0].size > MAX_FILE_SIZE) {
+        this._showFeedback('Ukuran gambar tidak boleh lebih dari 1 MB.', 'error', feedbackElement);
+        return;
+      }
+
+      // 3. Validasi Lokasi (Perbaikan Error 400)
+      if (!latInput.value) {
+        this._showFeedback('Silakan pilih lokasi di peta terlebih dahulu.', 'error', feedbackElement);
         return;
       }
       
+      // --- AKHIR VALIDASI TAMBAHAN ---
+
       const formData = new FormData(form);
       
       // Tampilkan loading
       submitButton.disabled = true;
       submitButton.innerText = 'Mengunggah...';
-      this._showFeedback('', '', feedbackElement); // Hapus pesan lama
 
       try {
-        await addNewStory(formData);
-        this._showFeedback('Cerita berhasil ditambahkan!', 'success', feedbackElement);
-        form.reset(); // Kosongkan form setelah berhasil
+        const response = await addNewStory(formData);
         
-        // Arahkan kembali ke halaman utama setelah 2 detik
+        // Periksa apakah ini respons offline dari api.js
+        if (response.offline) {
+          this._showFeedback(response.message, 'success', feedbackElement);
+        } else {
+          this._showFeedback('Cerita berhasil ditambahkan!', 'success', feedbackElement);
+        }
+        
+        form.reset();
+        
         setTimeout(() => {
           window.location.hash = '#/';
         }, 2000);
