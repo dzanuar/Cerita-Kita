@@ -2,7 +2,7 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
-const WorkboxWebpackPlugin = require('workbox-webpack-plugin');
+// Workbox plugin is applied only in production build (see webpack.prod.js)
 const webpack = require('webpack');
 
 module.exports = {
@@ -57,13 +57,10 @@ module.exports = {
       ],
     }),
 
-    // ✅ Gunakan InjectManifest agar kita bisa menulis custom service worker (push, sync, dll)
-    new WorkboxWebpackPlugin.InjectManifest({
-      swSrc: path.resolve(__dirname, 'src/scripts/sw.js'),
-      swDest: 'sw.js',
-      // max size default is small; naikkan jika Anda memiliki aset besar untuk precache
-      maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-    }),
+    // Note: InjectManifest is applied in webpack.prod.js so it only runs during
+    // `npm run build` (production). This avoids multiple InjectManifest runs
+    // when using dev server / watch mode which can cause duplicate
+    // self.__WB_MANIFEST injections or build warnings.
     // Inject environment variables into client bundle at build time.
     new webpack.DefinePlugin({
       'process.env': {
