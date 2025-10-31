@@ -1,22 +1,13 @@
-/* Service Worker (custom) - used with Workbox InjectManifest
-   Features:
-   - precache via self.__WB_MANIFEST (injected at build time)
-   - runtime caching for navigation and images
-   - push notification handler with actions
-   - notificationclick handler to focus/open the app
-   - background sync handler for queued 'stories' when offline
-*/
-
 import { precacheAndRoute } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
-import { StaleWhileRevalidate } from 'workbox-strategies';
-import { CacheFirst } from 'workbox-strategies';
+import { StaleWhileRevalidate, CacheFirst } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { openDB } from 'idb';
 
+// 1. Precache App Shell (Sudah Benar)
 precacheAndRoute(self.__WB_MANIFEST || []);
 
-// Navigation requests (SPA shell)
+// 2. Cache Navigasi (Sudah Benar)
 registerRoute(
   ({ request }) => request.mode === 'navigate',
   new StaleWhileRevalidate({
@@ -24,24 +15,45 @@ registerRoute(
   })
 );
 
-// Static images - cache first
+// 3. Cache Ikon Aplikasi Lokal (CacheFirst)
 registerRoute(
-  ({ request }) => request.destination === 'image',
+  ({ request }) =>
+    request.destination === 'image' &&
+    (request.url.includes('/icons/') || request.url.includes('/images/')), // Ikon & gambar lokal
   new CacheFirst({
-    cacheName: 'images-cache',
+    cacheName: 'local-images-cache',
     plugins: [
-      new ExpirationPlugin({ maxEntries: 60, maxAgeSeconds: 30 * 24 * 60 * 60 }),
+      new ExpirationPlugin({ maxEntries: 30, maxAgeSeconds: 30 * 24 * 60 * 60 }),
     ],
   })
 );
 
-// OpenStreetMap tiles (stale while revalidate) - keep as runtime rule
+// 4. Cache Tile Peta (StaleWhileRevalidate)
 registerRoute(
   ({ url }) => url.origin.includes('tile.openstreetmap.org'),
-  new StaleWhileRevalidate({ cacheName: 'osm-tiles' })
+  new StaleWhileRevalidate({ 
+    cacheName: 'osm-tiles-cache' 
+  })
 );
 
-// Simple local IndexedDB used for offline queueing (sync)
+// 5. INI PERBAIKANNYA: Cache Gambar Cerita (StaleWhileRevalidate)
+registerRoute(
+  ({ url }) => url.href.startsWith('https://story-api.dicoding.dev/images/stories/'),
+  new StaleWhileRevalidate({
+    cacheName: 'story-images-cache',
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 60, // Simpan 60 gambar terakhir
+        maxAgeSeconds: 30 * 24 * 60 * 60, // 30 hari
+      }),
+    ],
+  })
+);
+
+
+// --- SISANYA TETAP SAMA (IDB, PUSH, SYNC) ---
+
+// Database untuk Sync Queue
 const DB_NAME = 'pwa-app-db';
 const DB_VERSION = 1;
 const QUEUE_STORE = 'sync-queue';
@@ -55,34 +67,30 @@ async function getDb() {
     },
   });
 }
-
 async function addToQueue(item) {
   const db = await getDb();
   return db.add(QUEUE_STORE, item);
 }
-
 async function getAllQueue() {
   const db = await getDb();
   return db.getAll(QUEUE_STORE);
 }
-
 async function deleteQueueItem(id) {
   const db = await getDb();
   return db.delete(QUEUE_STORE, id);
 }
 
-// Message listener (skip waiting from client)
+// Lifecycle (Sudah Benar)
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
 });
-
 self.addEventListener('activate', (event) => {
   event.waitUntil(clients.claim());
 });
 
-// Push notification handler
+// Push Notification (Sudah Benar)
 self.addEventListener('push', (event) => {
   let payload = { title: 'Notifikasi', body: 'Anda menerima notifikasi', url: '/' };
   try {
@@ -90,7 +98,6 @@ self.addEventListener('push', (event) => {
       payload = event.data.json();
     }
   } catch (err) {
-    // fallback to text
     payload.body = event.data ? event.data.text() : payload.body;
   }
 
@@ -109,11 +116,10 @@ self.addEventListener('push', (event) => {
       { action: 'dismiss', title: 'Tutup' },
     ],
   };
-
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
-// Notification click handler
+// Notification Click (Sudah Benar)
 self.addEventListener('notificationclick', (event) => {
   const action = event.action;
   const notification = event.notification;
@@ -123,8 +129,7 @@ self.addEventListener('notificationclick', (event) => {
   if (action === 'dismiss') {
     return;
   }
-
-  // Fokus atau buka jendela ke URL
+  
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
@@ -139,21 +144,18 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-// Background sync event - process queued stories
+// Background Sync (Sudah Benar)
 self.addEventListener('sync', (event) => {
   if (event.tag === 'sync-new-stories') {
     event.waitUntil(processQueue());
   }
 });
-
 async function processQueue() {
   const queue = await getAllQueue();
   if (!queue || queue.length === 0) return;
 
   for (const item of queue) {
     try {
-      // item should contain { url, method, headers, body }
-      // Reconstruct FormData if body is an object (with possible Blob/File values)
       let fetchBody = item.body;
       let fetchOptions = {
         method: item.method || 'POST',
@@ -165,9 +167,7 @@ async function processQueue() {
           const formData = new FormData();
           for (const key of Object.keys(fetchBody)) {
             const val = fetchBody[key];
-            // If val is a Blob/File (has size and type), append with filename if available
             if (val && typeof val === 'object' && (typeof val.size === 'number' || val instanceof Blob)) {
-              // val could be a File (has name) or Blob
               const filename = val.name || `${key}`;
               formData.append(key, val, filename);
             } else {
@@ -175,12 +175,10 @@ async function processQueue() {
             }
           }
           fetchBody = formData;
-          // Don't set Content-Type header; browser will set boundary for multipart/form-data
           if (fetchOptions.headers && fetchOptions.headers['Content-Type']) {
             delete fetchOptions.headers['Content-Type'];
           }
         } catch (errForm) {
-          // Fall back to sending JSON if FormData reconstruction fails
           try {
             fetchBody = JSON.stringify(fetchBody);
             fetchOptions.headers = Object.assign({}, fetchOptions.headers, { 'Content-Type': 'application/json' });
@@ -198,9 +196,6 @@ async function processQueue() {
       }
     } catch (err) {
       console.error('SW sync: Failed to send queued item', err);
-      // keep item in queue to retry later
     }
   }
 }
-
-// Optional fetch handler fallback (let Workbox precache/routing handle others)
