@@ -2,7 +2,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 // Impor ini adalah "Network First" (dari api.js)
 import { getAllStories } from '../../data/api'; 
-// Impor ini adalah "Cache Only" (untuk pencarian)
+// Impor ini adalah "Cache Only" (untuk pencarian dan favorit)
 import StoryIdb from '../../utils/idb-helper'; 
 
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -21,13 +21,15 @@ class HomePage {
   #markers = {};
 
   async render() {
-    // ... (Fungsi render() Anda tidak berubah) ...
     return `
       <div class="content-container">
         <div class="story-list-container">
           <h2>Daftar Cerita</h2>
           
           <div class="search-container" role="search">
+            
+            <label for="search-input" class="visually-hidden">Cari cerita berdasarkan nama atau deskripsi</label>
+            
             <input 
               type="search" 
               id="search-input" 
@@ -46,7 +48,6 @@ class HomePage {
   }
 
   async afterRender() {
-    // ... (Fungsi afterRender() Anda tidak berubah) ...
     requestAnimationFrame(() => {
       this.#map = L.map('map').setView([-2.5489, 118.0149], 5);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -58,29 +59,20 @@ class HomePage {
     });
   }
 
-  // --- INI ADALAH PERBAIKAN UTAMANYA ---
   async _loadInitialData() {
     try {
-      // SELALU panggil getAllStories() dari api.js
-      // File ini sudah punya logika: Network first, fallback to cache (IDB)
-      // dan otomatis menyimpan ke IDB jika sukses.
       console.log('Fetching stories (Network first)...');
-      const stories = await getAllStories(); // <-- Ini dari api.js
-      
-  // Render data (baik data baru dari API, atau data lama dari IDB jika offline)
-  await this._renderStoryList(stories);
+      const stories = await getAllStories(); // Ini dari api.js
+      this._renderStoryList(stories);
     
     } catch (error) {
-      // Error ini hanya akan muncul jika network GAGAL dan IDB juga KOSONG
       console.error('Gagal memuat cerita (network and cache failed):', error);
       const storyListElement = document.querySelector('#story-list');
       storyListElement.innerHTML = `<p style="color: var(--text-secondary);">Gagal memuat cerita. Coba lagi nanti.</p>`;
     }
   }
-  // --- AKHIR PERBAIKAN ---
 
   async _renderStoryList(stories) {
-    // ... (Fungsi _renderStoryList() Anda tidak berubah) ...
     const storyListElement = document.querySelector('#story-list');
     storyListElement.innerHTML = '';
 
@@ -94,7 +86,10 @@ class HomePage {
       return;
     }
 
-    for (const story of stories) {
+    // Dapatkan daftar ID favorit untuk menandai tombol
+    const favoriteIds = (await StoryIdb.getAllFavorites()).map(story => story.id);
+
+    stories.forEach(story => {
       const storyItem = document.createElement('div');
       storyItem.classList.add('story-item');
       storyItem.setAttribute('data-id', story.id);
@@ -102,10 +97,18 @@ class HomePage {
       const storyDate = new Date(story.createdAt).toLocaleDateString('id-ID', {
         day: 'numeric', month: 'long', year: 'numeric'
       });
+      
+      const isFavorited = favoriteIds.includes(story.id);
 
       storyItem.innerHTML = `
+        <button 
+          class="favorite-button ${isFavorited ? 'favorited' : ''}" 
+          aria-label="${isFavorited ? 'Hapus dari favorit' : 'Tambahkan ke favorit'}"
+          data-story-id="${story.id}"
+        >
+          &#9733; </button>
+        
         <img src="${story.photoUrl}" alt="Foto cerita dari ${story.name}">
-        <button class="favorite-btn" data-id="${story.id}" aria-label="Tambahkan ke favorit">☆</button>
         <div class="story-item-content">
           <p class="story-date">${storyDate}</p>
           <h3>${story.name}</h3>
@@ -114,35 +117,6 @@ class HomePage {
       `;
       
       storyListElement.appendChild(storyItem);
-
-      // Favorite button wiring
-      try {
-        const favBtn = storyItem.querySelector('.favorite-btn');
-        const isFav = await StoryIdb.isFavorite(story.id);
-        favBtn.textContent = isFav ? '♥' : '☆';
-        favBtn.title = isFav ? 'Hapus dari favorit' : 'Tambahkan ke favorit';
-        favBtn.addEventListener('click', async (ev) => {
-          ev.stopPropagation(); // Jangan trigger klik kartu
-          try {
-            const currentlyFav = await StoryIdb.isFavorite(story.id);
-            if (currentlyFav) {
-              await StoryIdb.removeFavorite(story.id);
-              favBtn.textContent = '☆';
-              favBtn.title = 'Tambahkan ke favorit';
-            } else {
-              // Store minimal story snapshot
-              await StoryIdb.addFavorite({ id: story.id, name: story.name, description: story.description, photoUrl: story.photoUrl, createdAt: story.createdAt });
-              favBtn.textContent = '♥';
-              favBtn.title = 'Hapus dari favorit';
-            }
-          } catch (err) {
-            console.error('Favorite toggle failed', err);
-            alert('Gagal mengubah favorit: ' + err.message);
-          }
-        });
-      } catch (err) {
-        console.warn('Favorite button wiring failed', err);
-      }
 
       if (story.lat && story.lon) {
         const marker = L.marker([story.lat, story.lon])
@@ -153,17 +127,43 @@ class HomePage {
           this._highlightStoryItem(story.id);
         });
         this.#markers[story.id] = marker;
-        }
       }
+    });
+    
+    // Tambahkan event listener untuk tombol favorit setelah dirender
+    this._setupFavoriteToggleEvents(stories);
+  }
+  
+  _setupFavoriteToggleEvents(stories) {
+    const favoriteButtons = document.querySelectorAll('.favorite-button');
+    favoriteButtons.forEach(button => {
+      button.addEventListener('click', async (event) => {
+        event.stopPropagation(); // Hentikan event agar tidak memicu klik item cerita
+        const storyId = event.target.dataset.storyId;
+        const story = stories.find(s => s.id === storyId);
+        
+        if (await StoryIdb.isFavorite(storyId)) {
+          await StoryIdb.removeFavorite(storyId);
+          event.target.classList.remove('favorited');
+          event.target.setAttribute('aria-label', 'Tambahkan ke favorit');
+        } else {
+          await StoryIdb.addFavorite(story);
+          event.target.classList.add('favorited');
+          event.target.setAttribute('aria-label', 'Hapus dari favorit');
+        }
+      });
+    });
   }
 
   _setupEventListeners() {
-    // ... (Fungsi _setupEventListeners() Anda tidak berubah) ...
-    // Catatan: Fungsi pencarian Anda masih mencari dari IDB,
-    // yang datanya sudah diperbarui oleh _loadInitialData. Ini sudah benar.
     const storyListElement = document.querySelector('#story-list');
     
     storyListElement.addEventListener('click', (event) => {
+      // Pastikan yang diklik bukan tombol favorit
+      if (event.target.classList.contains('favorite-button')) {
+        return;
+      }
+      
       const storyItem = event.target.closest('.story-item');
       if (storyItem) {
         const storyId = storyItem.getAttribute('data-id');
@@ -180,13 +180,13 @@ class HomePage {
     const searchInput = document.querySelector('#search-input');
     searchInput.addEventListener('input', async (event) => {
       const query = event.target.value;
-      const stories = await StoryIdb.searchStories(query);
+      // Saat mencari, kita cari dari semua cerita yang ada di IDB
+      const stories = await StoryIdb.searchStories(query); 
       this._renderStoryList(stories);
     });
   }
 
   _highlightStoryItem(storyId) {
-    // ... (Fungsi _highlightStoryItem() Anda tidak berubah) ...
     document.querySelectorAll('.story-item').forEach(item => {
       item.classList.remove('story-item--active');
     });
