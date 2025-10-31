@@ -1,3 +1,4 @@
+// src/scripts/push-manager.js
 import CONFIG from './config';
 import SessionStorage from './utils/session-storage';
 
@@ -27,15 +28,13 @@ async function subscribeUser(registration) {
   const opts = { userVisibleOnly: true, applicationServerKey };
   const subscription = await registration.pushManager.subscribe(opts);
 
-  // Save subscription locally for demo; ideally send to backend
   try {
     sessionStorage.setItem('pushSubscription', JSON.stringify(subscription));
   } catch (err) {
     console.warn('Could not persist subscription locally', err);
   }
 
-  // Optionally send subscription to server if endpoint exists
-  if (CONFIG.BASE_URL && CONFIG.PUSH_SUBSCRIBE_ENDPOINT) {
+  if (CONFIG.PUSH_SUBSCRIBE_ENDPOINT) {
     try {
       await fetch(CONFIG.PUSH_SUBSCRIBE_ENDPOINT, {
         method: 'POST',
@@ -56,8 +55,7 @@ async function unsubscribeUser(registration) {
   if (sub) {
     await sub.unsubscribe();
     try { sessionStorage.removeItem('pushSubscription'); } catch (e) {}
-    // Optionally notify server of unsubscription
-    if (CONFIG.BASE_URL && CONFIG.PUSH_UNSUBSCRIBE_ENDPOINT) {
+    if (CONFIG.PUSH_UNSUBSCRIBE_ENDPOINT) {
       try {
         await fetch(CONFIG.PUSH_UNSUBSCRIBE_ENDPOINT, {
           method: 'POST',
@@ -73,7 +71,24 @@ async function unsubscribeUser(registration) {
   return false;
 }
 
-// UI helper to create a toggle button for push
+// === 🧩 PERBAIKAN UTAMA ===
+async function ensureNotificationPermission() {
+  if (!('Notification' in window)) return;
+
+  if (Notification.permission === 'default') {
+    console.log('[Push] Requesting permission automatically...');
+    try {
+      const permission = await Notification.requestPermission();
+      console.log('[Push] Permission result:', permission);
+    } catch (err) {
+      console.warn('[Push] Permission request failed:', err);
+    }
+  } else {
+    console.log('[Push] Permission already:', Notification.permission);
+  }
+}
+
+// === 🧩 UI HELPER ===
 export function initPushToggle() {
   const container = document.createElement('div');
   container.style.position = 'fixed';
@@ -94,7 +109,6 @@ export function initPushToggle() {
   container.appendChild(btn);
   document.body.appendChild(container);
 
-  // Update state
   async function updateState() {
     if (!('serviceWorker' in navigator)) return;
     const reg = await navigator.serviceWorker.ready;
@@ -114,10 +128,17 @@ export function initPushToggle() {
 
   btn.addEventListener('click', async () => {
     try {
-      if (Notification.permission === 'default') {
-        await Notification.requestPermission();
-      }
       const reg = await navigator.serviceWorker.ready;
+
+      // Pastikan izin ada sebelum berlangganan
+      if (Notification.permission === 'default') {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+          alert('Permission denied. Please allow notifications.');
+          return;
+        }
+      }
+
       const subscribed = await isSubscribed(reg);
       if (subscribed) {
         await unsubscribeUser(reg);
@@ -131,8 +152,12 @@ export function initPushToggle() {
     }
   });
 
-  // Initial state
-  setTimeout(updateState, 1000);
+  // === PERBAIKAN TAMBAHAN ===
+  // Jalankan pemeriksaan otomatis saat tombol dibuat
+  setTimeout(async () => {
+    await ensureNotificationPermission();
+    await updateState();
+  }, 1500);
 }
 
-export { subscribeUser, unsubscribeUser, isSubscribed };
+export { subscribeUser, unsubscribeUser, isSubscribed, ensureNotificationPermission };
