@@ -37,14 +37,14 @@
     {
       "name": "Tambah Cerita",
       "short_name": "Tambah",
-      "url": "/#/add",
-      "icons": [{ "src": "/icons/shortcut-add.png", "sizes": "96x96", "type": "image/png" }]
+      "url": "/#/add-story",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "Favorit",
       "short_name": "Favorit",
       "url": "/#/favorites",
-      "icons": [{ "src": "/icons/shortcut-fav.png", "sizes": "96x96", "type": "image/png" }]
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     }
   ]
 }
