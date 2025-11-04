@@ -3,9 +3,14 @@
   publish = "dist"
 
 [context.production.environment]
-  # Set these environment variables in Netlify site settings (UI) before deploying
-  # VAPID_PUBLIC_KEY = "<your-vapid-public-key>"
-  # PUSH_SERVER_URL = "https://your-push-server.example"
+  # Samakan penamaan agar konsisten dengan config.js
+  VITE_PUBLIC_VAPID_KEY = "${VAPID_PUBLIC_KEY}"
+  PUSH_SERVER_URL = "https://your-push-server.example" # ganti sesuai servermu
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
 
 [[redirects]]
   from = "/*"

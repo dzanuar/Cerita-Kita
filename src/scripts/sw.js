@@ -1,59 +1,59 @@
+/* eslint-disable no-undef */
 import { precacheAndRoute } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
 import { StaleWhileRevalidate, CacheFirst } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { openDB } from 'idb';
 
-// 1. Precache App Shell (Sudah Benar)
+// 1. Precache App Shell
 precacheAndRoute(self.__WB_MANIFEST || []);
 
-// 2. Cache Navigasi (Sudah Benar)
+// 2. Cache Navigasi (HTML)
 registerRoute(
   ({ request }) => request.mode === 'navigate',
-  new StaleWhileRevalidate({
-    cacheName: 'html-pages',
-  })
+  new StaleWhileRevalidate({ cacheName: 'html-pages' })
 );
 
-// 3. Cache Ikon Aplikasi Lokal (CacheFirst)
+// 3. Cache Ikon & Gambar Lokal
 registerRoute(
   ({ request }) =>
     request.destination === 'image' &&
-    (request.url.includes('/icons/') || request.url.includes('/images/')), // Ikon & gambar lokal
+    (request.url.includes('/icons/') || request.url.includes('/images/')),
   new CacheFirst({
     cacheName: 'local-images-cache',
-    plugins: [
-      new ExpirationPlugin({ maxEntries: 30, maxAgeSeconds: 30 * 24 * 60 * 60 }),
-    ],
+    plugins: [new ExpirationPlugin({ maxEntries: 30, maxAgeSeconds: 30 * 24 * 60 * 60 })],
   })
 );
 
-// 4. Cache Tile Peta (StaleWhileRevalidate)
+// 4. Cache Tile Peta
 registerRoute(
   ({ url }) => url.origin.includes('tile.openstreetmap.org'),
-  new StaleWhileRevalidate({ 
-    cacheName: 'osm-tiles-cache' 
-  })
+  new StaleWhileRevalidate({ cacheName: 'osm-tiles-cache' })
 );
 
-// 5. INI PERBAIKANNYA: Cache Gambar Cerita (StaleWhileRevalidate)
+// 5. Cache Gambar Cerita (CDN Dicoding)
 registerRoute(
   ({ url }) => url.href.startsWith('https://story-api.dicoding.dev/images/stories/'),
   new StaleWhileRevalidate({
     cacheName: 'story-images-cache',
-    plugins: [
-      new ExpirationPlugin({
-        maxEntries: 60, // Simpan 60 gambar terakhir
-        maxAgeSeconds: 30 * 24 * 60 * 60, // 30 hari
-      }),
-    ],
+    plugins: [new ExpirationPlugin({ maxEntries: 60, maxAgeSeconds: 30 * 24 * 60 * 60 })],
   })
 );
 
+// 6. Cache DATA DINAMIS API (Stale-While-Revalidate)
+//   → Saat offline, daftar/story terakhir tetap ada (Skilled/Advanced saran reviewer)
+registerRoute(
+  ({ url, request }) =>
+    request.method === 'GET' &&
+    url.origin === 'https://story-api.dicoding.dev' &&
+    (url.pathname.startsWith('/v1/stories') || url.pathname.startsWith('/v1/detail')),
+  new StaleWhileRevalidate({
+    cacheName: 'api-stories-cache',
+    plugins: [new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 7 * 24 * 60 * 60 })],
+  })
+);
 
-// --- SISANYA TETAP SAMA (IDB, PUSH, SYNC) ---
-
-// Database untuk Sync Queue
+// ==== IndexedDB untuk Background Sync Queue ====
 const DB_NAME = 'pwa-app-db';
 const DB_VERSION = 1;
 const QUEUE_STORE = 'sync-queue';
@@ -67,10 +67,6 @@ async function getDb() {
     },
   });
 }
-async function addToQueue(item) {
-  const db = await getDb();
-  return db.add(QUEUE_STORE, item);
-}
 async function getAllQueue() {
   const db = await getDb();
   return db.getAll(QUEUE_STORE);
@@ -80,25 +76,22 @@ async function deleteQueueItem(id) {
   return db.delete(QUEUE_STORE, id);
 }
 
-// Lifecycle (Sudah Benar)
+// Lifecycle
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
+  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 self.addEventListener('activate', (event) => {
   event.waitUntil(clients.claim());
 });
 
-// Push Notification (Sudah Benar)
+// ==== PUSH NOTIFICATION ====
+// Dinamis + actions (Skilled/Advanced)
 self.addEventListener('push', (event) => {
-  let payload = { title: 'Notifikasi', body: 'Anda menerima notifikasi', url: '/' };
+  let payload = { title: 'Notifikasi Baru', body: 'Ada data baru ditambahkan.', url: '/' };
   try {
-    if (event.data) {
-      payload = event.data.json();
-    }
-  } catch (err) {
-    payload.body = event.data ? event.data.text() : payload.body;
+    if (event.data) payload = event.data.json();
+  } catch {
+    if (event.data) payload.body = event.data.text();
   }
 
   const title = payload.title || 'PWA Notification';
@@ -106,50 +99,39 @@ self.addEventListener('push', (event) => {
     body: payload.body,
     icon: payload.icon || '/icons/icon-192x192.png',
     badge: payload.badge || '/icons/icon-192x192.png',
-    data: {
-      url: payload.url || '/',
-      dateOfArrival: Date.now(),
-      primaryKey: payload.id || 0,
-    },
+    data: { url: payload.url || '/', id: payload.id || Date.now() },
     actions: [
-      { action: 'open', title: 'Buka Aplikasi' },
+      { action: 'open', title: 'Lihat Detail' },
       { action: 'dismiss', title: 'Tutup' },
     ],
   };
+
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
-// Notification Click (Sudah Benar)
 self.addEventListener('notificationclick', (event) => {
-  const action = event.action;
-  const notification = event.notification;
-  const data = notification.data || {};
   event.notification.close();
+  if (event.action === 'dismiss') return;
 
-  if (action === 'dismiss') {
-    return;
-  }
-  
+  const targetUrl = event.notification.data?.url || '/';
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if (client.url === data.url && 'focus' in client) {
-          return client.focus();
-        }
+    (async () => {
+      const all = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+      const same = all.find((c) => c.url.includes(new URL(targetUrl, self.location.origin).pathname));
+      if (same) {
+        await same.focus();
+        return same.navigate(targetUrl);
       }
-      if (clients.openWindow) {
-        return clients.openWindow(data.url);
-      }
-    })
+      return clients.openWindow(targetUrl);
+    })()
   );
 });
 
-// Background Sync (Sudah Benar)
+// ==== BACKGROUND SYNC ====
 self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-new-stories') {
-    event.waitUntil(processQueue());
-  }
+  if (event.tag === 'sync-new-stories') event.waitUntil(processQueue());
 });
+
 async function processQueue() {
   const queue = await getAllQueue();
   if (!queue || queue.length === 0) return;
@@ -157,11 +139,9 @@ async function processQueue() {
   for (const item of queue) {
     try {
       let fetchBody = item.body;
-      let fetchOptions = {
-        method: item.method || 'POST',
-        headers: item.headers || {},
-      };
+      const fetchOptions = { method: item.method || 'POST', headers: item.headers || {} };
 
+      // Siapkan body (FormData atau JSON)
       if (fetchBody && typeof fetchBody === 'object' && !(fetchBody instanceof ArrayBuffer) && !(fetchBody instanceof String)) {
         try {
           const formData = new FormData();
@@ -175,16 +155,10 @@ async function processQueue() {
             }
           }
           fetchBody = formData;
-          if (fetchOptions.headers && fetchOptions.headers['Content-Type']) {
-            delete fetchOptions.headers['Content-Type'];
-          }
-        } catch (errForm) {
-          try {
-            fetchBody = JSON.stringify(fetchBody);
-            fetchOptions.headers = Object.assign({}, fetchOptions.headers, { 'Content-Type': 'application/json' });
-          } catch (jsonErr) {
-            console.error('SW: Failed to prepare queued item body', jsonErr);
-          }
+          if (fetchOptions.headers && fetchOptions.headers['Content-Type']) delete fetchOptions.headers['Content-Type'];
+        } catch {
+          fetchBody = JSON.stringify(fetchBody);
+          fetchOptions.headers = Object.assign({}, fetchOptions.headers, { 'Content-Type': 'application/json' });
         }
       }
 

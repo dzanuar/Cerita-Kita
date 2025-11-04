@@ -1,46 +1,16 @@
-const swRegister = async () => {
+// src/scripts/sw-register.js
+export default async function swRegister() {
   if (!('serviceWorker' in navigator)) {
-    console.log('Browser tidak mendukung Service Worker');
-    return;
+    console.warn('Service worker not supported');
+    return null;
   }
-
   try {
-    // Registrasi harus menunjuk ke file service worker yang dihasilkan (sw.js)
-    // Gunakan path dari root agar konsisten dengan publicPath webpack
-    const swUrl = '/sw.js';
-    const registration = await navigator.serviceWorker.register(swUrl);
-    console.log('Service Worker berhasil terdaftar:', registration);
-
-    // Proses update SW baru
-    if (registration.waiting) {
-      console.log('SW baru waiting');
-      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-    }
-
-  // Tambahkan event listener untuk update
-    registration.addEventListener('updatefound', () => {
-      const newWorker = registration.installing;
-      console.log('SW update ditemukan');
-
-      if (!newWorker) return;
-
-      newWorker.addEventListener('statechange', () => {
-        if (newWorker.state === 'installed') {
-          if (navigator.serviceWorker.controller) {
-            console.log('Update SW tersedia — beri tahu pengguna atau reload.');
-            // opsi: otomatis reload atau tampilkan notifikasi update
-            window.location.reload();
-          } else {
-            console.log('Konten siap digunakan offline');
-          }
-        }
-      });
-    });
-
+    const registration = await navigator.serviceWorker.register('/sw.js');
+    // Tunggu ready supaya Push siap dipakai
+    await navigator.serviceWorker.ready;
     return registration;
-  } catch (error) {
-    console.error('SW gagal terdaftar:', error);
+  } catch (err) {
+    console.error('SW registration failed:', err);
+    throw err;
   }
-};
-
-export default swRegister;
+}

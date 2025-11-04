@@ -4,12 +4,11 @@ services:
     env: node
     plan: free
     region: oregon
-    # Start command uses package.json script start:server
     buildCommand: ""
     startCommand: "npm run start:server"
     healthCheckPath: "/"
     envVars:
-      - key: VAPID_PUBLIC
+      - key: VAPID_PUBLIC_KEY
         value: "<your-vapid-public-key>"
-      - key: VAPID_PRIVATE
+      - key: VAPID_PRIVATE_KEY
         value: "<your-vapid-private-key>"
