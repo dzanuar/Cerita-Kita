@@ -5,50 +5,44 @@ import swRegister from './sw-register';
 import { initPushToggle } from './push-manager';
 import SyncManager from './utils/sync-manager';
 
-// debug
 console.log('DEBUG: index.js loaded');
 
-document.addEventListener('DOMContentLoaded', async () => {
-  console.log('DEBUG: DOMContentLoaded fired');
+async function initApp() {
+  console.log('DEBUG: DOMContentLoaded fired');
 
-  const app = new App({
-    content: document.querySelector('#main-content'),
-    drawerButton: document.querySelector('#drawer-button'),
-    navigationDrawer: document.querySelector('#navigation-drawer'),
-  });
+  const app = new App({
+    content: document.querySelector('#main-content'),
+    drawerButton: document.querySelector('#drawer-button'),
+    navigationDrawer: document.querySelector('#navigation-drawer'),
+  });
 
-  // Render halaman pertama
-  await app.renderPage();
+  // Render halaman pertama
+  await app.renderPage();
 
-  // --- PERBAIKAN DI SINI ---
-  // Jangan menunggu 'window.load'.
-  // Daftarkan SW dan tombol Push segera setelah DOM siap.
-  console.log('DEBUG: DOM ready — registering service worker and push toggle');
-  try {
+  console.log('DEBUG: DOM ready — registering service worker and push toggle');
+  try {
     const registration = await swRegister();
-    // Inisialisasi tombol Push setelah SW siap
     if (registration) {
-      initPushToggle();
+      // init pertama
+      await initPushToggle();
     }
   } catch (err) {
     console.error('SW registration or Push init failed:', err);
   }
-  // --- AKHIR PERBAIKAN ---
 
-  // Coba jalankan antrian sinkronisasi saat startup
-  try {
-    await SyncManager.flushQueueViaClient();
-  } catch (err) {
-    console.warn('Initial flush failed (likely offline):', err);
-  }
+  // Flush antrian sync saat startup
+  try {
+    await SyncManager.flushQueueViaClient();
+  } catch (err) {
+    console.warn('Initial flush failed (likely offline):', err);
+  }
+  SyncManager.setupAutoFlush({ intervalMs: 30000 });
 
-  // Atur auto flush (saat online / periodik)
-  SyncManager.setupAutoFlush({ intervalMs: 30000 });
+  // Re-render & re-init toggle setiap navigasi SPA
+  window.addEventListener('hashchange', async () => {
+    await app.renderPage();
+    await initPushToggle(); // <-- re-inisialisasi tombol setelah DOM berganti
+  });
+}
 
-  // Setup SPA routing
-  window.addEventListener('hashchange', async () => {
-    await app.renderPage();
-  });
-
-  // HAPUS 'window.load' listener yang lama
-});
+document.addEventListener('DOMContentLoaded', initApp);
