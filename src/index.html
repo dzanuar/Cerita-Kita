@@ -5,18 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <meta name="theme-color" content="#343a40">
-  <link rel="manifest" href="/manifest.json"> <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
-  
-  <title>Cerita Kita</title>
-</head>
-<body>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
 
+  <title>Cerita Kita</title>
+
+  <!-- ✅ Tambahkan runtime ENV fallback agar VAPID key terbaca -->
+  <script>
+    window.__ENV = {
+      VAPID_PUBLIC_KEY: "BMZSnO8mCyrm2zLvTg3h4vU1NSBLY206GOyDI5OH2BMiNheOAUF-hcChw3RctNj6IdtvmT-CehF8oqey528oSeA"
+    };
+  </script>
+
+  <!-- ✅ Tambahkan script bundle utama -->
+  <script defer src="/app.bundle.js"></script>
+
+  <!-- ✅ Tambahkan stylesheet -->
+  <link href="/app.b6a41c656de4da1dcf7d.css" rel="stylesheet">
+</head>
+
+<body>
   <header>
     <div class="main-header container">
       <h1 class="brand-name"><a href="#/">Cerita Kita</a></h1>
 
       <button id="drawer-button" class="drawer-button" aria-label="Buka menu navigasi">☰</button>
-      
+
+      <!-- ✅ Tambahkan tombol toggle notifikasi -->
+      <button id="btnPushToggle" class="btn">Enable notifications</button>
+
       <nav id="navigation-drawer" class="navigation-drawer">
         <ul id="nav-list" class="nav-list">
           <li class="main-nav-link"><a href="#/">Beranda</a></li>
@@ -34,6 +51,5 @@
   <footer>
     <p>Submission Project © 2025</p>
   </footer>
-
-  </body>
+</body>
 </html>
