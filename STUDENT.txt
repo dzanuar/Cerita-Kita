@@ -1,2 +1,2 @@
-APP_URL=https://ceritakitapwa.netlify.app/
+APP_URL=https://cerita-kita-six.vercel.app/
 MAP_SERVICE_API_KEY=<api_key>
