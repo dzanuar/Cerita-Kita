@@ -1,12 +1,12 @@
 {
-  "version": 2,
-  "builds": [
-    { "src": "package.json", "use": "@vercel/static-build" }
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
   ],
-  "routes": [
-    { "src": "/sw\\.js", "dest": "/sw.js" },
-    { "src": "/(.*)", "dest": "/index.html" }
-  ],
-  "framework": null,
-  "outputDirectory": "dist"
+  "headers": [
+    {
+      "source": "/sw.js",
+      "headers": [{ "key": "Service-Worker-Allowed", "value": "/" }]
+    }
+  ]
 }
