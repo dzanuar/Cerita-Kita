@@ -7,7 +7,7 @@ import SyncManager from './utils/sync-manager';
 
 console.log('DEBUG: index.js loaded');
 
-async function initApp() {
+document.addEventListener('DOMContentLoaded', async () => {
   console.log('DEBUG: DOMContentLoaded fired');
 
   const app = new App({
@@ -16,21 +16,30 @@ async function initApp() {
     navigationDrawer: document.querySelector('#navigation-drawer'),
   });
 
-  // Render halaman pertama
   await app.renderPage();
 
-  console.log('DEBUG: DOM ready — registering service worker and push toggle');
-  try {
-    const registration = await swRegister();
-    if (registration) {
-      // init pertama
-      await initPushToggle();
+  // Deteksi production berbasis token compile-time dari DefinePlugin
+  // Gunakan __PROD__ jika tersedia; fallback ke process.env.NODE_ENV.
+  // Keduanya akan direplace ke literal saat build, jadi aman di browser.
+  // eslint-disable-next-line no-undef
+  const isProd = (typeof __PROD__ !== 'undefined' ? __PROD__ : process.env.NODE_ENV === 'production');
+
+  if (isProd) {
+    console.log('DEBUG: Production — registering service worker and push toggle');
+    try {
+      const reg = await swRegister();
+      if (reg) initPushToggle();
+    } catch (e) {
+      console.error('SW registration or Push init failed:', e);
     }
-  } catch (err) {
-    console.error('SW registration or Push init failed:', err);
+  } else {
+    console.log('DEBUG: Development — SW disabled (to avoid watch/reload loop)');
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const r of regs) await r.unregister();
+    }
   }
 
-  // Flush antrian sync saat startup
   try {
     await SyncManager.flushQueueViaClient();
   } catch (err) {
@@ -38,11 +47,7 @@ async function initApp() {
   }
   SyncManager.setupAutoFlush({ intervalMs: 30000 });
 
-  // Re-render & re-init toggle setiap navigasi SPA
   window.addEventListener('hashchange', async () => {
     await app.renderPage();
-    await initPushToggle(); // <-- re-inisialisasi tombol setelah DOM berganti
   });
-}
-
-document.addEventListener('DOMContentLoaded', initApp);
+});

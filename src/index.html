@@ -3,28 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <meta name="theme-color" content="#343a40" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+
   <title>Cerita Kita</title>
-
-  <!-- Runtime ENV fallback agar terbaca di browser -->
-  <script>
-    window.__ENV = {
-      VAPID_PUBLIC_KEY: "BMZSnO8mCyrm2zLvTg3h4vU1NSBLY206GOyDI5OH2BMiNheOAUF-hcChw3RctNj6IdtvmT-CehF8oqey528oSeA",
-      PUSH_SERVER_URL: "https://cerita-kita.onrender.com"   /* <— penting: TANPA slash di belakang */
-    };
-  </script>
-
-  <script defer src="/app.bundle.js"></script>
-  <link href="/app.b6a41c656de4da1dcf7d.css" rel="stylesheet" />
+  <!-- Jangan tambahkan <script src="/app.bundle.js"> atau <link rel="stylesheet"> manual.
+       HtmlWebpackPlugin akan inject file hasil build (hashed). -->
 </head>
 <body>
   <header>
     <div class="main-header container">
       <h1 class="brand-name"><a href="#/">Cerita Kita</a></h1>
+
       <button id="drawer-button" class="drawer-button" aria-label="Buka menu navigasi">☰</button>
-      <button id="btnPushToggle" class="btn" style="margin-left:1rem;">Enable notifications</button>
+
       <nav id="navigation-drawer" class="navigation-drawer">
         <ul id="nav-list" class="nav-list">
           <li class="main-nav-link"><a href="#/">Beranda</a></li>
@@ -42,5 +36,8 @@
   <footer>
     <p>Submission Project © 2025</p>
   </footer>
+
+  <!-- MUHARUSKAN: runtime env harus dimuat SEBELUM bundle aplikasi di-inject oleh HtmlWebpackPlugin -->
+  <script src="/env.js"></script>
 </body>
 </html>
