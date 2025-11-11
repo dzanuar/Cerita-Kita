@@ -9,7 +9,6 @@ async function safeJson(res) {
   try {
     return JSON.parse(text);
   } catch {
-    // bila bukan JSON valid, kembalikan sebagai text mentah untuk debug
     return { raw: text };
   }
 }
@@ -36,14 +35,11 @@ async function request(path, { method = 'GET', body, auth = false, headers = {} 
     body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
   });
 
-  // Sukses → coba parse JSON aman
   if (res.ok) {
-    // beberapa endpoint mengembalikan 204/empty body
     if (res.status === 204) return {};
     return safeJson(res);
   }
 
-  // Error → ambil isi raw untuk pesan yang jelas
   const errText = await res.text().catch(() => '');
   let message = `HTTP ${res.status}`;
   if (errText) message += `: ${errText}`;
@@ -65,8 +61,8 @@ export async function registerUser({ name, email, password }) {
 }
 
 export async function getAllStories() {
-  // GET /stories (auth tidak wajib)
-  const data = await request('/stories', { method: 'GET' });
+  // GET /stories (BUTUH AUTH di Story API v1)
+  const data = await request('/stories', { method: 'GET', auth: true });
   // Normalisasi bila API mengembalikan {listStory: [...]}
   return data?.listStory || data?.stories || [];
 }

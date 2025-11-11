@@ -1,6 +1,6 @@
 import { loginUser } from '../data/api';
 import SessionStorage from '../utils/session-storage';
-import { initPushToggle } from '../push-manager'; // <-- tambahkan ini
+import { initPushToggle } from '../push-manager';
 
 class LoginPage {
   async render() {
@@ -45,10 +45,21 @@ class LoginPage {
       this._showFeedback('', '', feedbackElement);
 
       try {
-        const loginResult = await loginUser({ email, password });
-        SessionStorage.saveUserToken(loginResult.token);
+        const res = await loginUser({ email, password });
+        // Ambil token yang benar dari struktur response Story API:
+        // { error:false, loginResult: { token, name, userId } }
+        const token =
+          res?.loginResult?.token ??
+          res?.token ??
+          null;
 
-        // >>> DAFTARKAN SUBSCRIPTION KE STORY API SETELAH TOKEN ADA <<<
+        if (!token) {
+          throw new Error('Token tidak ditemukan pada respons login.');
+        }
+
+        SessionStorage.saveUserToken(token);
+
+        // Daftarkan push subscription setelah token tersimpan
         try { await initPushToggle(); } catch (e) { console.warn(e); }
 
         this._showFeedback('Login berhasil! Anda akan diarahkan ke halaman utama.', 'success', feedbackElement);

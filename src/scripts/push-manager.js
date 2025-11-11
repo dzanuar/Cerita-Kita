@@ -15,7 +15,7 @@ function urlBase64ToUint8Array(base64String) {
 /** Minta izin notifikasi bila belum ada */
 async function ensureNotificationPermission() {
   if (!('Notification' in window)) {
-    console.warn('Push: Notifications API tidak didukung.');
+    console.warn('Push: Notifications API tidak didukung di browser ini.');
     return 'denied';
   }
   if (Notification.permission === 'granted') return 'granted';
@@ -28,9 +28,10 @@ async function getOrCreateSubscription(registration) {
   if (existing) return existing;
 
   if (!CONFIG.VAPID_PUBLIC_KEY) {
-    console.error('Push: VAPID_PUBLIC_KEY kosong. Set via env.js atau env build.');
+    console.error('Push: VAPID_PUBLIC_KEY kosong. Set via src/public/env.js atau env build.');
     throw new Error('VAPID public key missing');
   }
+
   const applicationServerKey = urlBase64ToUint8Array(CONFIG.VAPID_PUBLIC_KEY);
   return registration.pushManager.subscribe({
     userVisibleOnly: true,
@@ -38,12 +39,28 @@ async function getOrCreateSubscription(registration) {
   });
 }
 
+/** Validasi sederhana JWT (3 part terpisah titik & non-trivial) */
+function isLikelyJwt(token) {
+  return (
+    typeof token === 'string' &&
+    token.split('.').length === 3 &&
+    token.length > 20
+  );
+}
+
 /** Kirim subscription ke Story API: POST {BASE_URL}/notifications/subscribe */
 async function sendSubscriptionToStoryAPI(subscription) {
   const endpoint = CONFIG.NOTIF_SUBSCRIBE_ENDPOINT; // ex: https://story-api.dicoding.dev/v1/notifications/subscribe
   const token = SessionStorage.getUserToken?.();
+
   if (!endpoint) throw new Error('Endpoint subscribe Story API tidak terdefinisi.');
   if (!token) throw new Error('Token tidak ditemukan. Login terlebih dahulu sebelum subscribe.');
+  if (!isLikelyJwt(token)) {
+    throw new Error('Token tidak valid. Silakan login ulang.');
+  }
+
+  // Pastikan body berupa object plain, bukan PushSubscription langsung
+  const body = subscription?.toJSON ? subscription.toJSON() : subscription;
 
   const res = await fetch(endpoint, {
     method: 'POST',
@@ -51,7 +68,7 @@ async function sendSubscriptionToStoryAPI(subscription) {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify(subscription),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
@@ -64,6 +81,7 @@ async function sendSubscriptionToStoryAPI(subscription) {
  * Inisialisasi push:
  * - pastikan permission
  * - pastikan SW ready
+ * - cek token valid
  * - buat/ambil subscription
  * - kirim ke Story API
  */
@@ -80,10 +98,13 @@ export async function initPushToggle() {
       return;
     }
 
-    // Jika user belum login, tunda—hindari error token
     const token = SessionStorage.getUserToken?.();
     if (!token) {
       console.warn('Push: belum login; tunda pendaftaran subscription.');
+      return;
+    }
+    if (!isLikelyJwt(token)) {
+      console.warn('Push: token login tidak tampak valid; abaikan registrasi push.');
       return;
     }
 
@@ -97,7 +118,7 @@ export async function initPushToggle() {
   }
 }
 
-/** Opsional: matikan push dari UI */
+/** Opsional: matikan push dari UI / saat logout */
 export async function disablePush() {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.ready;
