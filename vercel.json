@@ -1,12 +1,21 @@
 {
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/v1/(.*)",
+      "destination": "https://story-api.dicoding.dev/v1/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
     {
       "source": "/sw.js",
-      "headers": [{ "key": "Service-Worker-Allowed", "value": "/" }]
+      "headers": [
+        { "key": "Service-Worker-Allowed", "value": "/" }
+      ]
     }
   ]
 }
