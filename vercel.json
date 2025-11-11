@@ -1,21 +1,16 @@
 {
   "cleanUrls": true,
-  "rewrites": [
-    {
-      "source": "/v1/(.*)",
-      "destination": "https://story-api.dicoding.dev/v1/$1"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ],
   "headers": [
     {
       "source": "/sw.js",
-      "headers": [
-        { "key": "Service-Worker-Allowed", "value": "/" }
-      ]
+      "headers": [{ "key": "Service-Worker-Allowed", "value": "/" }]
     }
+  ],
+  "rewrites": [
+    { "source": "/(.*\\.(?:js|css|png|jpg|jpeg|svg|webp|gif|ico|json|txt|map))", "destination": "/$1" },
+    { "source": "/(icons/.*)", "destination": "/$1" },
+    { "source": "/(images/.*)", "destination": "/$1" },
+    { "source": "/(assets/.*)", "destination": "/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
