@@ -6,10 +6,13 @@
 
   <meta name="theme-color" content="#343a40" />
   <link rel="manifest" href="/manifest.json" />
-  <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+
+  <!-- Ikon -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
 
   <title>Cerita Kita</title>
-  <!-- Jangan tambahkan <script src="/app.bundle.js"> atau <link rel="stylesheet"> manual.
+  <!-- Jangan menambahkan <script src="/app.bundle.js"> atau <link rel="stylesheet"> manual.
        HtmlWebpackPlugin akan inject file hasil build (hashed). -->
 </head>
 <body>
@@ -37,7 +40,7 @@
     <p>Submission Project © 2025</p>
   </footer>
 
-  <!-- MUHARUSKAN: runtime env harus dimuat SEBELUM bundle aplikasi di-inject oleh HtmlWebpackPlugin -->
+  <!-- runtime env harus dimuat SEBELUM bundle di-inject oleh HtmlWebpackPlugin -->
   <script src="/env.js"></script>
 </body>
 </html>

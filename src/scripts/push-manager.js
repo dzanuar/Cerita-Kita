@@ -1,43 +1,36 @@
 // src/scripts/push-manager.js
 import CONFIG from './config';
+import SessionStorage from './utils/session-storage';
 
-/**
- * Mengubah base64 url-safe public key menjadi Uint8Array untuk subscribe()
- */
+/** Base64 URL-safe → Uint8Array (untuk VAPID) */
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
   const raw = atob(base64);
-  const output = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; ++i) output[i] = raw.charCodeAt(i);
-  return output;
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
 }
 
-/**
- * Meminta permission notifikasi (kalau belum) dan mengembalikan statusnya.
- */
+/** Minta izin notifikasi bila belum ada */
 async function ensureNotificationPermission() {
   if (!('Notification' in window)) {
-    console.warn('Notifications API tidak didukung browser ini.');
+    console.warn('Push: Notifications API tidak didukung.');
     return 'denied';
   }
   if (Notification.permission === 'granted') return 'granted';
-  const perm = await Notification.requestPermission();
-  return perm; // 'granted' | 'denied' | 'default'
+  return Notification.requestPermission();
 }
 
-/**
- * Membuat atau mengambil subscription push yang sudah ada.
- */
+/** Ambil subscription existing atau buat baru */
 async function getOrCreateSubscription(registration) {
   const existing = await registration.pushManager.getSubscription();
   if (existing) return existing;
 
   if (!CONFIG.VAPID_PUBLIC_KEY) {
-    console.error('Push: VAPID_PUBLIC_KEY kosong. Set env VAPID_PUBLIC_KEY saat build.');
+    console.error('Push: VAPID_PUBLIC_KEY kosong. Set via env.js atau env build.');
     throw new Error('VAPID public key missing');
   }
-
   const applicationServerKey = urlBase64ToUint8Array(CONFIG.VAPID_PUBLIC_KEY);
   return registration.pushManager.subscribe({
     userVisibleOnly: true,
@@ -45,50 +38,40 @@ async function getOrCreateSubscription(registration) {
   });
 }
 
-/**
- * Mengirim subscription ke server push Anda.
- */
-async function sendSubscriptionToServer(subscription) {
-  const endpoint = CONFIG.PUSH_SUBSCRIBE_ENDPOINT;
-  if (!endpoint) {
-    console.warn('Push: PUSH_SUBSCRIBE_ENDPOINT kosong; lewati pengiriman ke server.');
-    return;
-  }
+/** Kirim subscription ke Story API: POST {BASE_URL}/notifications/subscribe */
+async function sendSubscriptionToStoryAPI(subscription) {
+  const endpoint = CONFIG.NOTIF_SUBSCRIBE_ENDPOINT; // ex: https://story-api.dicoding.dev/v1/notifications/subscribe
+  const token = SessionStorage.getUserToken?.();
+  if (!endpoint) throw new Error('Endpoint subscribe Story API tidak terdefinisi.');
+  if (!token) throw new Error('Token tidak ditemukan. Login terlebih dahulu sebelum subscribe.');
+
   const res = await fetch(endpoint, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify(subscription),
   });
+
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    throw new Error(`Register subscription gagal: ${res.status} ${text}`);
+    throw new Error(`Subscribe ke Story API gagal: ${res.status} ${text}`);
   }
 }
 
 /**
- * Menghapus subscription di server push Anda (opsional: panggil saat toggle off).
- */
-async function removeSubscriptionOnServer(subscription) {
-  const endpoint = CONFIG.PUSH_UNSUBSCRIBE_ENDPOINT;
-  if (!endpoint) return;
-  await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ endpoint: subscription.endpoint }),
-  }).catch(() => {});
-}
-
-/**
- * Dipanggil dari index.js setelah SW ter-register.
- * - Pastikan permission granted
- * - Buat subscription
- * - Kirim ke server
+ * Inisialisasi push:
+ * - pastikan permission
+ * - pastikan SW ready
+ * - buat/ambil subscription
+ * - kirim ke Story API
  */
 export async function initPushToggle() {
   try {
     const perm = await ensureNotificationPermission();
     if (perm !== 'granted') {
-      console.warn('Push: permission tidak granted; tombol/fitur push dinonaktifkan.');
+      console.warn('Push: permission tidak granted; fitur push dilewati.');
       return;
     }
 
@@ -97,26 +80,30 @@ export async function initPushToggle() {
       return;
     }
 
+    // Jika user belum login, tunda—hindari error token
+    const token = SessionStorage.getUserToken?.();
+    if (!token) {
+      console.warn('Push: belum login; tunda pendaftaran subscription.');
+      return;
+    }
+
     const reg = await navigator.serviceWorker.ready;
     const sub = await getOrCreateSubscription(reg);
-    await sendSubscriptionToServer(sub);
+    await sendSubscriptionToStoryAPI(sub);
 
-    console.log('Push: subscription aktif & terdaftar ke server.');
+    console.log('Push: subscription aktif & terdaftar ke Story API.');
   } catch (err) {
     console.error('Push init error:', err);
   }
 }
 
-/**
- * Opsional: fungsi untuk menonaktifkan push via UI (toggle off).
- */
+/** Opsional: matikan push dari UI */
 export async function disablePush() {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.ready;
   const sub = await reg.pushManager.getSubscription();
   if (sub) {
-    await removeSubscriptionOnServer(sub);
     await sub.unsubscribe();
-    console.log('Push: subscription dihentikan.');
+    console.log('Push: subscription dihentikan (klien).');
   }
 }

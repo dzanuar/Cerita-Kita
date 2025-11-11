@@ -1,5 +1,6 @@
-import { loginUser } from '../data/api'; // <-- PERBAIKAN DI SINI
+import { loginUser } from '../data/api';
 import SessionStorage from '../utils/session-storage';
+import { initPushToggle } from '../push-manager'; // <-- tambahkan ini
 
 class LoginPage {
   async render() {
@@ -24,14 +25,13 @@ class LoginPage {
   }
 
   async afterRender() {
-    // ... (sisa kode tidak berubah)
     const form = document.querySelector('#login-form');
     const feedbackElement = document.querySelector('#feedback-message');
     const submitButton = document.querySelector('#submit-button');
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
-      
+
       if (!form.checkValidity()) {
         this._showFeedback('Email dan password harus diisi.', 'error', feedbackElement);
         return;
@@ -39,7 +39,7 @@ class LoginPage {
 
       const email = form.elements.email.value;
       const password = form.elements.password.value;
-      
+
       submitButton.disabled = true;
       submitButton.innerText = 'Masuk...';
       this._showFeedback('', '', feedbackElement);
@@ -47,8 +47,12 @@ class LoginPage {
       try {
         const loginResult = await loginUser({ email, password });
         SessionStorage.saveUserToken(loginResult.token);
+
+        // >>> DAFTARKAN SUBSCRIPTION KE STORY API SETELAH TOKEN ADA <<<
+        try { await initPushToggle(); } catch (e) { console.warn(e); }
+
         this._showFeedback('Login berhasil! Anda akan diarahkan ke halaman utama.', 'success', feedbackElement);
-        
+
         setTimeout(() => {
           window.location.hash = '#/';
           window.location.reload();

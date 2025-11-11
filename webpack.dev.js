@@ -13,18 +13,26 @@ module.exports = merge(common, {
     clean: true,
   },
   devServer: {
-    static: { directory: path.join(__dirname, 'dist') },
+    // ⬇︎ Sajikan file statis dari src/public (icons, env.js, manifest, dsb.)
+    static: { directory: path.join(__dirname, 'src', 'public') },
     compress: true,
     port: 9000,
     open: true,
     historyApiFallback: true,
+
+    // ⬇︎ Proxy semua request /v1 → https://story-api.dicoding.dev/v1
     proxy: {
       '/v1': {
         target: 'https://story-api.dicoding.dev',
         changeOrigin: true,
-        secure: false,
+        secure: true,          // default true; boleh dibiarkan
+        // logLevel: 'debug',   // aktifkan bila perlu debug proxy
       },
     },
+
+    // opsional, nyaman saat dev:
+    client: { overlay: true },
+    allowedHosts: 'all',
   },
   module: {
     rules: [
@@ -33,14 +41,9 @@ module.exports = merge(common, {
   },
   plugins: [
     new webpack.DefinePlugin({
-      // Flags eksplisit untuk digunakan di kode
       __PROD__: JSON.stringify(false),
       __DEV__: JSON.stringify(true),
-
-      // Pastikan token ini juga tersedia (kadang dipakai library)
       'process.env.NODE_ENV': JSON.stringify('development'),
-
-      // Env lain yang Anda pakai
       'process.env.PUSH_SERVER_URL': JSON.stringify(process.env.PUSH_SERVER_URL || 'http://localhost:3000'),
       'process.env.VAPID_PUBLIC_KEY': JSON.stringify(process.env.VAPID_PUBLIC_KEY || ''),
     }),
