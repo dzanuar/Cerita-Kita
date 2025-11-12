@@ -1,4 +1,5 @@
 // src/public/env.js
 window.__ENV = {
-  VAPID_PUBLIC_KEY: 'BMZSnO8mCyrm2zLvTg3h4vU1NSBLY206GOyDI5OH2BMiNheOAUF-hcChw3RctNj6IdtvmT-CehF8oqey528oSeA'
+  VAPID_PUBLIC_KEY:
+    'BCCs2eonMI-6H2ctvFaWg-UYdDv387Vno_bzUzALpB442r2lCnsHmtrx8biyPi_E-1fSGABK_Qs_GlvPoJJqxbk',
 };

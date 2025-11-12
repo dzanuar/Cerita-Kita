@@ -13,39 +13,36 @@ module.exports = merge(common, {
     clean: true,
   },
   devServer: {
-    // ⬇︎ Sajikan file statis dari src/public (icons, env.js, manifest, dsb.)
     static: { directory: path.join(__dirname, 'src', 'public') },
     compress: true,
     port: 9000,
     open: true,
     historyApiFallback: true,
-
-    // ⬇︎ Proxy semua request /v1 → https://story-api.dicoding.dev/v1
     proxy: {
       '/v1': {
         target: 'https://story-api.dicoding.dev',
         changeOrigin: true,
-        secure: true,          // default true; boleh dibiarkan
-        // logLevel: 'debug',   // aktifkan bila perlu debug proxy
+        secure: true,
       },
     },
-
-    // opsional, nyaman saat dev:
     client: { overlay: true },
     allowedHosts: 'all',
   },
   module: {
-    rules: [
-      { test: /\.css$/i, use: ['style-loader', 'css-loader'] },
-    ],
+    rules: [{ test: /\.css$/i, use: ['style-loader', 'css-loader'] }],
   },
   plugins: [
     new webpack.DefinePlugin({
       __PROD__: JSON.stringify(false),
       __DEV__: JSON.stringify(true),
       'process.env.NODE_ENV': JSON.stringify('development'),
+
+      // fallback saat dev bila kamu belum set ENV di shell
       'process.env.PUSH_SERVER_URL': JSON.stringify(process.env.PUSH_SERVER_URL || 'http://localhost:3000'),
-      'process.env.VAPID_PUBLIC_KEY': JSON.stringify(process.env.VAPID_PUBLIC_KEY || ''),
+      'process.env.VAPID_PUBLIC_KEY': JSON.stringify(
+        process.env.VAPID_PUBLIC_KEY ||
+          'BCCs2eonMI-6H2ctvFaWg-UYdDv387Vno_bzUzALpB442r2lCnsHmtrx8biyPi_E-1fSGABK_Qs_GlvPoJJqxbk'
+      ),
     }),
   ],
 });

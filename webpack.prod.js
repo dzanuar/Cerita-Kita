@@ -16,9 +16,7 @@ module.exports = merge(common, {
     clean: true,
   },
   module: {
-    rules: [
-      { test: /\.css$/i, use: [MiniCssExtractPlugin.loader, 'css-loader'] },
-    ],
+    rules: [{ test: /\.css$/i, use: [MiniCssExtractPlugin.loader, 'css-loader'] }],
   },
   plugins: [
     new MiniCssExtractPlugin({ filename: '[name].[contenthash].css' }),
@@ -28,16 +26,16 @@ module.exports = merge(common, {
       maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
     }),
     new webpack.DefinePlugin({
-      // Flags eksplisit untuk digunakan di kode
       __PROD__: JSON.stringify(true),
       __DEV__: JSON.stringify(false),
-
-      // Token umum yang sering dipakai oleh library & terser dead-code
       'process.env.NODE_ENV': JSON.stringify('production'),
 
-      // Env lain yang Anda pakai
+      // fallback saat build (selain env.js runtime)
       'process.env.PUSH_SERVER_URL': JSON.stringify(process.env.PUSH_SERVER_URL || ''),
-      'process.env.VAPID_PUBLIC_KEY': JSON.stringify(process.env.VAPID_PUBLIC_KEY || ''),
+      'process.env.VAPID_PUBLIC_KEY': JSON.stringify(
+        process.env.VAPID_PUBLIC_KEY ||
+          'BCCs2eonMI-6H2ctvFaWg-UYdDv387Vno_bzUzALpB442r2lCnsHmtrx8biyPi_E-1fSGABK_Qs_GlvPoJJqxbk'
+      ),
     }),
   ],
   optimization: {
